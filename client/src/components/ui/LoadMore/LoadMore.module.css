@@ -1,0 +1,12 @@
+.showMoreBtn__block {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.showMoreBtn {
+    border: 1px solid #2b2b2b;
+    padding: 10px;
+    max-width: 200px;
+    flex-grow: 1;
+}

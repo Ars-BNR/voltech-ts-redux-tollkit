@@ -7,7 +7,15 @@ export interface Data {
   password: string;
   confirmPassword: string;
 }
-
+export interface ProductData {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  maxPrice: number;
+  minPrice: number;
+  data: Product[];
+}
 export interface Product {
   id: number;
   price: number;

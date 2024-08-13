@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, FC } from "react";
+import React, { useState, useEffect, FC } from "react";
 import classes from "./CatalogPage.module.css";
 import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
@@ -10,8 +10,10 @@ import { convertStringToNumber } from "../../../utils/convertStringToNumber";
 import basketService from "../../../services/basket-service";
 import SortBlock from "./sortBlock/SortBlock";
 import CardList from "./cardList/CardList";
-import { Product } from "../../../types/type";
+import { Product, ProductData } from "../../../types/type";
 import { useAppSelector } from "../../../hooks/redux";
+import Pagination from "../../ui/Pagination/Pagination";
+import LoadMore from "../../ui/LoadMore/LoadMore";
 
 const CatalogPage: FC = () => {
   const { profiles } = useAppSelector((state) => state.auth);
@@ -19,7 +21,15 @@ const CatalogPage: FC = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const category = queryParams.get("category");
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductData>({
+    data: [],
+    total: 0,
+    page: 1,
+    limit: 1,
+    totalPages: 2,
+    minPrice: 1,
+    maxPrice: 1,
+  });
   const [selectedCategory] = useState<string | null>(category);
   const [brand, setBrand] = useState<string[]>([]);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
@@ -27,13 +37,30 @@ const CatalogPage: FC = () => {
   const [noProductsFound, setNoProductsFound] = useState<boolean>(false);
   const [maxPrice, setMaxPrice] = useState<number>();
   const [minPrice, setMinPrice] = useState<number>();
+
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [countItemInPage, setcountItemInPage] = useState<number>(2);
+
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     fetchProducts();
-  }, [selectedBrands, selectedCategory]);
+  }, [selectedBrands, selectedCategory, currentPage]);
 
   const fetchProducts = async (min?: number, max?: number) => {
-    let params: { category?: string | null; price?: string; brand?: string } = {
+    setIsLoading(true);
+    let params: {
+      category?: string | null;
+      price?: string;
+      brand?: string;
+      page?: number;
+      limit?: number;
+    } = {
       category: selectedCategory,
+      page: currentPage,
+      limit: countItemInPage,
     };
     if (min && max) {
       params.price = [min, max].join("-");
@@ -47,13 +74,21 @@ const CatalogPage: FC = () => {
     }
     try {
       const productsData = await catalogService.get(params);
-      setProducts(productsData);
+      // setProducts(productsData);
 
-      if (productsData.length > 0) {
-        const prices = productsData.map((el: Product) => el.price);
+      if (productsData.data.length > 0) {
+        if (isLoadingMore) {
+          setProducts((prevProducts) => ({
+            ...productsData,
+            data: [...prevProducts.data, ...productsData.data],
+          }));
+        } else {
+          setProducts(productsData);
+        }
         if (!minPrice && !maxPrice) {
-          const minPrice = Math.min(...prices);
-          const maxPrice = Math.max(...prices);
+          console.log(productsData);
+          const minPrice = productsData.minPrice;
+          const maxPrice = productsData.maxPrice;
           setMaxPrice(maxPrice);
           setMinPrice(minPrice);
           if (priceRange.length === 0) {
@@ -61,7 +96,9 @@ const CatalogPage: FC = () => {
           }
           const brands = Array.from(
             new Set(
-              productsData.map((product: Product) => product.main_info["Бренд"])
+              productsData.data.map(
+                (product: Product) => product.main_info["Бренд"]
+              )
             )
           ) as string[];
           setBrand(brands);
@@ -72,6 +109,9 @@ const CatalogPage: FC = () => {
       }
     } catch (error) {
       console.error("Failed to fetch products:", error);
+    } finally {
+      setIsLoadingMore(false);
+      setIsLoading(false);
     }
   };
   const handlePriceInputChange = (
@@ -107,7 +147,7 @@ const CatalogPage: FC = () => {
             max = maxPrice;
           }
           setPriceRange([min, max]);
-          fetchProducts(min, max);
+          fetchProducts();
         }
       }
     }
@@ -146,6 +186,40 @@ const CatalogPage: FC = () => {
       console.log(error);
     }
   };
+
+  const handlePageChange = (page: number): void => {
+    console.log(page);
+    setCurrentPage(page);
+    setProducts((prevProducts) => ({
+      ...prevProducts,
+      data: [],
+    }));
+    setIsLoadingMore(false);
+  };
+  const loadMoreItems = (page: number) => {
+    console.log(page);
+    if (currentPage < products.totalPages) {
+      setIsLoadingMore(true);
+      setCurrentPage((prevPage) => prevPage + 1);
+    }
+  };
+  if (isLoading) {
+    return (
+      <h1
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          fontSize: "30px",
+        }}
+      >
+        {" "}
+        Загрузка.....
+      </h1>
+    );
+  }
   return (
     products && (
       <div className={classes.catalogPage}>
@@ -166,6 +240,16 @@ const CatalogPage: FC = () => {
         ) : (
           <div className={classes.catalogBlock}>
             <CardList products={products} HandleAddBasket={HandleAddBasket} />
+            <LoadMore
+              showMoreProducts={loadMoreItems}
+              totalPages={products.totalPages}
+              currentPage={currentPage}
+            />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={products.totalPages}
+              onPageChange={handlePageChange}
+            />
           </div>
         )}
       </div>

@@ -6,6 +6,8 @@ type QueryParams = {
   category?: string;
   price?: string;
   brand?: string;
+  page?: number;
+  limit?: number;
 };
 type Equipment = {
   type_equip: string;
@@ -42,10 +44,29 @@ class CatalogService {
         },
       };
     }
+    const page = Number(query.page) ?? 1;
+    const limit = Number(query.limit) ?? 2;
 
-    const equipments = await EquipmentsModel.findAll({ where });
+    const offset = (page - 1) * limit;
 
-    return equipments;
+    const { count, rows } = await EquipmentsModel.findAndCountAll({
+      where,
+      limit,
+      offset,
+    });
+    const maxPrice = await EquipmentsModel.max("price", { where });
+    const minPrice = await EquipmentsModel.min("price", { where });
+    const totalPages = Math.ceil(count / limit);
+
+    return {
+      total: count,
+      page,
+      limit,
+      totalPages,
+      maxPrice,
+      minPrice,
+      data: rows,
+    };
   }
 
   async createItem(equipment: Equipment, pathimg: UploadedFile) {

@@ -1,4 +1,4 @@
-import { FC, useContext, useState } from "react";
+import { FC, useState } from "react";
 import classes from "./AdminPanel.module.css";
 import { Link } from "react-router-dom";
 import { useEffect } from "react";

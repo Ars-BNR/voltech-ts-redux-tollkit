@@ -40,6 +40,7 @@ const SortBlock: FC<SortBlockProps> = ({
   handleSliderPriceChange,
   fetchProducts,
 }) => {
+  console.log("object");
   return (
     <div className={classes.sortBlock}>
       <p className={classes.sortBlock__title}>Сортировка</p>
