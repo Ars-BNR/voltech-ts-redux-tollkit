@@ -74,7 +74,6 @@ const CatalogPage: FC = () => {
     }
     try {
       const productsData = await catalogService.get(params);
-      // setProducts(productsData);
 
       if (productsData.data.length > 0) {
         if (isLoadingMore) {
